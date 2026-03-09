@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчет ГИК Бишкек</title>
+    <title>Отчет Мех Эм Стр</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #f4f7f9; color: #333; padding: 15px; }
+        body { font-family: sans-serif; background-color: #f4f7f9; padding: 15px; color: #333; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        select, input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
-        .row-item { font-size: 14px; border-bottom: 1px solid #eee; padding: 8px 0; }
-        label { font-weight: bold; font-size: 14px; color: #666; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #555; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .item { border-bottom: 1px solid #eee; padding: 8px 0; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
+        <label>📅 Дата отчета:</label>
+        <input type="date" id="date">
+
         <label>🏗 Блок:</label>
         <select id="block">
             <option value="Блок 17">Блок 17</option>
             <option value="Блок 18">Блок 18</option>
-            <option value="Блок 22">Блок 22</option>
             <option value="Блок 26">Блок 26</option>
             <option value="Блок 29">Блок 29</option>
         </select>
@@ -28,89 +30,68 @@
         <label>📍 Этаж:</label>
         <select id="floor"></select>
 
-        <label>📁 Категория:</label>
-        <select id="category" onchange="updateWorks()">
-            <option value="">-- Выберите --</option>
+        <label>🛠 Работа (Мех Эм Стр):</label>
+        <select id="work">
+            <option value="Грунтование">Грунтование</option>
+            <option value="Установка маяков">Установка маяков</option>
+            <option value="Нанесение смеси">Нанесение смеси</option>
+            <option value="Глянцевание">Глянцевание</option>
+            <option value="Демонтаж маяков">Демонтаж маяков</option>
         </select>
 
-        <label>🛠 Работа:</label>
-        <select id="work"></select>
-
-        <label>🔢 Объем:</label>
+        <label>🔢 Объем (м² / пог.м):</label>
         <input type="number" id="volume" placeholder="0.00" step="0.1">
         
         <button onclick="addRow()">➕ Добавить строку</button>
     </div>
 
-    <div class="card" id="summary-card" style="display: none;">
-        <div id="rows-list"></div>
-        <button style="background-color: #28a745; margin-top: 15px;" onclick="sendToBot()">✅ Отправить в ГИК</button>
+    <div class="card" id="summary" style="display: none;">
+        <h3>Итого:</h3>
+        <div id="list"></div>
+        <button style="background-color: #28a745; margin-top: 15px;" onclick="send()">✅ Отправить отчет</button>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const data = {
-            "Кладка": ["Газоблок 600*300*200", "Сетка 15см", "Газоблок 600*300*100", "Арматура 6мм"],
-            "Усиление стен": ["Уголок 50*50*5", "Уголок 40*40*4", "Полоса 40*3мм"],
-            "Штукатурка": ["Бетоноконтакт", "Штукатурка стен", "Шпаклевка Глат", "Покраска"]
-        };
+        // Ставим сегодняшнюю дату по умолчанию
+        document.getElementById('date').valueAsDate = new Date();
 
-        // Заполнение этажей (1-24)
-        const floorSelect = document.getElementById('floor');
-        for (let i = 1; i <= 24; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerHTML = i + " этаж";
-            floorSelect.appendChild(opt);
+        // Заполняем этажи
+        const f = document.getElementById('floor');
+        for(let i=1; i<=24; i++) {
+            let o = document.createElement('option');
+            o.value = i; o.textContent = i + ' этаж';
+            f.appendChild(o);
         }
 
-        const catSelect = document.getElementById('category');
-        for (let cat in data) {
-            let opt = document.createElement('option');
-            opt.value = cat; opt.innerHTML = cat;
-            catSelect.appendChild(opt);
-        }
-
-        function updateWorks() {
-            const workSelect = document.getElementById('work');
-            const cat = catSelect.value;
-            workSelect.innerHTML = '';
-            if (data[cat]) {
-                data[cat].forEach(w => {
-                    let opt = document.createElement('option');
-                    opt.value = w; opt.innerHTML = w;
-                    workSelect.appendChild(opt);
-                });
-            }
-        }
-
-        const reportRows = [];
+        let rows = [];
         function addRow() {
+            const date = document.getElementById('date').value;
             const block = document.getElementById('block').value;
             const floor = document.getElementById('floor').value;
             const work = document.getElementById('work').value;
             const vol = document.getElementById('volume').value;
-            const cat = catSelect.value;
 
-            if (!vol) return alert("Введите объем!");
+            if(!vol) return alert("Введите объем!");
 
-            reportRows.push({ block, floor, cat, work, vol });
-            renderRows();
+            rows.push({ date, block, floor, work, vol });
+            render();
             document.getElementById('volume').value = '';
         }
 
-        function renderRows() {
-            const list = document.getElementById('rows-list');
-            list.innerHTML = '';
-            reportRows.forEach((r, i) => {
-                list.innerHTML += `<div class="row-item">${i+1}. ${r.block}, эт.${r.floor}: ${r.work} — <b>${r.vol}</b></div>`;
+        function render() {
+            const l = document.getElementById('list');
+            l.innerHTML = '';
+            rows.forEach((r, i) => {
+                l.innerHTML += `<div class="item">${i+1}. ${r.date} | ${r.block} | эт.${r.floor} | ${r.work}: <b>${r.vol}</b></div>`;
             });
-            document.getElementById('summary-card').style.display = 'block';
+            document.getElementById('summary').style.display = 'block';
         }
 
-        function sendToBot() {
-            tg.sendData(JSON.stringify(reportRows));
+        function send() {
+            tg.sendData(JSON.stringify(rows));
             tg.close();
         }
     </script>

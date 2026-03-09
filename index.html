@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет СТР</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f2f5; color: #333; padding: 15px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        select, input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .row-item { font-size: 14px; border-bottom: 1px solid #eee; padding: 5px 0; }
+        h3 { margin-top: 0; color: #0088cc; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>Новая запись</h3>
+        <label>Категория:</label>
+        <select id="category" onchange="updateWorks()">
+            <option value="">-- Выберите --</option>
+        </select>
+
+        <label>Работа:</label>
+        <select id="work">
+            <option value="">-- Сначала выберите категорию --</option>
+        </select>
+
+        <label>Объем:</label>
+        <input type="number" id="volume" placeholder="0.00" step="0.1">
+        
+        <button onclick="addRow()">➕ Добавить в список</button>
+    </div>
+
+    <div class="card" id="summary-card" style="display: none;">
+        <h3>Ваш отчет:</h3>
+        <div id="rows-list"></div>
+        <button style="background-color: #28a745; margin-top: 15px;" onclick="sendToBot()">✅ Отправить боту</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Развернуть на весь экран
+
+        const data = {
+            "Кладка": [
+                "Газоблок Стенный 600*300*200", "ВР 4 Сетка-Сварная 15см 1*2000мм",
+                "Газоблок Стенный 600*300*100", "ВР 4 Сетка-Сварная 10см 1*2000мм",
+                "Арматура Гладкая 6мм", "Сетка Металлическая для Штукатурки 10*10мм"
+            ],
+            "Усиление стен": [
+                "Уголок 50*50*5", "Уголок 40*40*4", "Полоса Стальной 40*3мм", "Арматура Гладкая 10мм"
+            ],
+            "Штукатурка": [
+                "Бетоноконтакт", "Сетка Сварная ВР4 15*15 1*5m2", "Штукатурка стен",
+                "Гипсовая Штукатурка Grender", "Гипсовая Шпатлевка Глат", "Финишная шпаклевка", "Покраска"
+            ]
+        };
+
+        const reportRows = [];
+
+        // Инициализация категорий
+        const catSelect = document.getElementById('category');
+        for (let cat in data) {
+            let opt = document.createElement('option');
+            opt.value = cat;
+            opt.innerHTML = cat;
+            catSelect.appendChild(opt);
+        }
+
+        function updateWorks() {
+            const workSelect = document.getElementById('work');
+            const cat = catSelect.value;
+            workSelect.innerHTML = '';
+            if (data[cat]) {
+                data[cat].forEach(w => {
+                    let opt = document.createElement('option');
+                    opt.value = w;
+                    opt.innerHTML = w;
+                    workSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function addRow() {
+            const cat = catSelect.value;
+            const work = document.getElementById('work').value;
+            const vol = document.getElementById('volume').value;
+
+            if (!cat || !work || !vol) {
+                alert("Заполните все поля!");
+                return;
+            }
+
+            reportRows.push({ cat, work, vol });
+            renderRows();
+            document.getElementById('volume').value = ''; // Очистить поле объема
+        }
+
+        function renderRows() {
+            const list = document.getElementById('rows-list');
+            const summary = document.getElementById('summary-card');
+            list.innerHTML = '';
+            reportRows.forEach((r, index) => {
+                list.innerHTML += `<div class="row-item">${index + 1}. ${r.work} — <b>${r.vol}</b></div>`;
+            });
+            summary.style.display = reportRows.length > 0 ? 'block' : 'none';
+        }
+
+        function sendToBot() {
+            if (reportRows.length === 0) return;
+            tg.sendData(JSON.stringify(reportRows)); // Отправка JSON строки боту
+            tg.close();
+        }
+    </script>
+</body>
+</html>

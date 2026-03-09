@@ -3,35 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчет ГИК</title>
+    <title>Отчет ГИК: Стр, Эм, Мех</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #f4f7f9; padding: 15px; color: #333; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #555; }
-        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .item { border-bottom: 1px solid #eee; padding: 8px 0; font-size: 14px; }
-        h3 { margin-top: 0; color: #0088cc; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; padding: 15px; color: #333; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px; color: #555; text-transform: uppercase; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; appearance: none; background-color: #fff; }
+        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        button:active { background-color: #006699; }
+        .summary-card { border-top: 3px solid #28a745; display: none; }
+        .item { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; line-height: 1.4; }
+        .item b { color: #0088cc; }
+        h3 { margin-top: 0; font-size: 18px; color: #222; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     </style>
 </head>
 <body>
+
     <div class="card">
+        <h3>Новая запись</h3>
+        
         <label>📅 Дата:</label>
         <input type="date" id="date">
 
         <label>⚙️ Система:</label>
         <select id="system" onchange="updateCategories()">
-            <option value="Стр">Стр (Кладка/Штукатурка)</option>
-            <option value="ЭМ">ЭМ (Электрика)</option>
-            <option value="Мех">Мех (Сантехника)</option>
+            <option value="Стр">Стр (Общестрой)</option>
+            <option value="Эм">Эм (Электрика)</option>
+            <option value="Мех">Мех (Сантехника/Отопление)</option>
         </select>
 
         <label>🏗 Блок:</label>
         <select id="block">
             <option value="Блок 17">Блок 17</option>
             <option value="Блок 18">Блок 18</option>
+            <option value="Блок 22">Блок 22</option>
+            <option value="Блок 23">Блок 23</option>
+            <option value="Блок 24">Блок 24</option>
+            <option value="Блок 25">Блок 25</option>
             <option value="Блок 26">Блок 26</option>
+            <option value="Блок 27">Блок 27</option>
+            <option value="Блок 28">Блок 28</option>
             <option value="Блок 29">Блок 29</option>
         </select>
 
@@ -40,22 +52,22 @@
 
         <label>📁 Категория:</label>
         <select id="category" onchange="updateWorks()">
-            <option value="">-- Выберите --</option>
+            <option value="">-- Выберите систему --</option>
         </select>
 
         <label>🛠 Работа:</label>
         <select id="work"></select>
 
         <label>🔢 Объем:</label>
-        <input type="number" id="volume" placeholder="0.00" step="0.1">
+        <input type="number" id="volume" placeholder="0.00" step="0.01">
         
         <button onclick="addRow()">➕ Добавить строку</button>
     </div>
 
-    <div class="card" id="summary" style="display: none;">
-        <h3>Ваш отчет:</h3>
+    <div class="card summary-card" id="summary">
+        <h3>Итоговый список:</h3>
         <div id="list"></div>
-        <button style="background-color: #28a745; margin-top: 15px;" onclick="send()">✅ Отправить в группу</button>
+        <button style="background-color: #28a745; margin-top: 15px;" onclick="sendData()">✅ Отправить в группу</button>
     </div>
 
     <script>
@@ -63,28 +75,49 @@
         tg.expand();
         document.getElementById('date').valueAsDate = new Date();
 
-        // Данные из ваших файлов works.json и works2.json
         const allData = {
-            "Стр": {
-                "Кладка": ["Газоблок 600*300*200", "Газоблок 600*300*100", "Арматура 6мм"],
-                "Штукатурка": ["Бетоноконтакт", "Штукатурка стен", "Шпаклевка"]
-            },
-            "ЭМ": {
-                "Кабель": ["Монтаж Кабель медный 3х1,5мм2", "Монтаж Кабель медный 3х2,5мм2", "Гофра Ф20мм"],
-                "Щиты": ["ЩК (Установка)", "ЩЭ (Установка)", "Автомат 16А"]
-            },
             "Мех": {
-                "ППР": ["Труба Ø20", "Труба Ø25", "Тройник Ø20"],
-                "Канализация": ["Труба ПВХ д110", "Труба ПВХ д50", "Унитаз"]
+                "Подг. работы": ["Штробление стен (50х50) (кирпич)", "Отверстия до 108 мм (бетон до 15см)", "Отверстия до 108 мм (бетон до 40см)", "Отверстия 100х100мм (кирпич)", "Штробление стяжки 50х50мм", "Штробление стен 50х50мм"],
+                "ППР 20": ["Монтаж труб Ø20 композит", "Монтаж труб Ø20", "Установка муфт/отводов Ø20", "Установка тройников Ø20", "Установка разъемов Ø20 вн резьба", "Установка вентилей ППР Ø20", "Установка шаблона душевого Ø20"],
+                "ППР 25": ["Монтаж труб Ø25 композит", "Монтаж труб Ø25", "Установка муфт/отводов Ø25", "Установка тройников Ø25", "Установка разъемов Ø25"],
+                "ППР 32": ["Монтаж труб Ø32 композит", "Установка муфт/отводов Ø32", "Установка тройников Ø32", "Установка разъемов Ø32"],
+                "Радиатор": ["Установка радиаторов", "Угловые краны радиаторов", "Установка терморегулятора", "Установка муфты Ø25 для радиатора"],
+                "Трубы стальные": ["Монтаж трубы Ø15х2,5", "Монтаж трубы Ø20х2,5", "Монтаж трубы Ø25х2,8", "Монтаж трубы Ø32х2,8", "Монтаж трубы Ø40х3,0", "Монтаж трубы Ø57х3,0", "Монтаж трубы Ø76х3,2", "Монтаж трубы Ø89х3,5", "Монтаж трубы Ø108х3,5", "Монтаж трубы Ø159х4,0", "Покраска/грунтовка"],
+                "Отводы сталь": ["Отвод Ø15-25 (гусак)", "Отвод Ø20", "Отвод Ø25", "Отвод Ø32", "Отвод Ø45", "Отвод Ø57", "Отвод Ø76", "Отвод Ø89", "Отвод Ø108", "Отвод Ø159"],
+                "Запорная арматура": ["Кран шаровый 15", "Заглушка латунная", "Кран приварной Ду 20-25", "Кран приварной Ду 32", "Кран приварной Ду 40", "Кран приварной Ду 50", "Клапан фланцевый ASV-I Ду 50-65", "Клапан фланцевый ASV-I Ду 32-40", "Вентиль барашковый Ø25"],
+                "Изоляция": ["Изоляция пластик", "Изоляция вспененная Ду 22", "Изоляция вспененная Ду 28", "Изоляция вспененная Ду 35", "Изоляция вспененная Ду 42", "Изоляция вспененная Ду 48", "Изоляция вспененная Ду 60", "Изоляция вспененная Ду 108"],
+                "ПВХ": ["Труба ПВХ д150", "Труба ПВХ д100", "Труба ПВХ д50", "Фасонная часть ПВХ д150", "Фасонная часть ПВХ д100", "Фасонная часть ПВХ д50", "Хомут металл д150", "Хомут металл д100", "Хомут металл д50"],
+                "Фаянс": ["Установка унитаза", "Установка умывальника", "Установка ванны", "Установка полотенцесушителя", "Смеситель умывальник", "Смеситель ванна", "Сифон умывальник", "Мойка кухня", "Смеситель мойка", "Сифон мойка", "Угловой кран д15"],
+                "Оборудование": ["Насос Sololift", "Насос Гном", "Водомерный узел д80", "Водомерный узел д50", "Электрические клапаны", "Пожарная станция"]
+            },
+            "Эм": {
+                "Подг. работы": ["Отверстие кирпич до 25мм", "Отверстие бетон до 25мм", "Штроба кирпич", "Штроба бетон", "Отверстие перекрытие д32"],
+                "Авт. выкл.": ["Автомат (габарит 100) 100-250А", "Автомат (габарит 100) 40-80А", "Автомат 25-80А", "Автомат 1п 10-63А"],
+                "Кабель Ал-й": ["3х185+1х120 АВВГ", "3х70+1х35 АВВГ", "1х120 АПВ", "1х35 АПВ", "3х240+1х120 АВВГ"],
+                "Кабель Медь": ["3х1,5 ВВГнг-ls", "3х2,5 ВВГнг-ls", "3х4 ВВГнг", "1х6 / 1х16 ПВ3", "3х10 / 3х16 ВВГнг", "5х16 ВВГнг-ls", "5х2,5 ВВГнг-ls", "2х0,75 ТРП"],
+                "Лотки": ["Лоток 300x50", "Лоток 200x50", "Лоток 100x50"],
+                "Освещение": ["Светильник LED 36Вт", "Светильник LED 18Вт", "Светильник IP44", "Патрон Е27", "Выключатель скр. 1-2 клав."],
+                "Этаж Квартира Щиты": ["ЩК Квартирный (Установка)", "ЩЭ Этажный (Установка)", "ЩК Квартирный (Сборка)", "ЩЭ Этажный (Сборка)"],
+                "Трубы и прочее": ["Гофра Ф16мм", "Гофра Ф20мм", "Гофра Ф25мм", "Кабель-канал 25х16", "Гильза Ø57", "ПВД 20/25/32/50", "Металлорукав 19мм", "Полоса 40х4мм", "ЩДУП коробка"],
+                "Щиты": ["ВРУ 1 (Уст/Сбор)", "ЩУР (Уст/Сбор)", "ЩВ", "ЩАО", "АВР", "ЩЛ Лифтов", "ЩНО Наружное", "ЩА Приточка", "ЩР"]
+            },
+            "Стр": {
+                "Кладка": ["Газоблок 600*300*200", "Сетка ВР 4 (15см)", "Газоблок 600*300*100", "Сетка ВР 4 (10см)", "Арматура 6мм", "Сетка металл 10*10"],
+                "Усиление стен": ["Уголок 50*50*5", "Уголок 40*40*4", "Полоса 40*3мм", "Арматура 10мм"],
+                "Штукатурка": ["Бетоноконтакт", "Сетка ВР4 15*15", "Штукатурка стен", "Grender гипсовая", "Глат шпатлевка", "Финишная шпатлевка", "Покраска"]
             }
         };
 
-        const f = document.getElementById('floor');
-        for(let i=1; i<=24; i++) {
+        // Заполнение этажей
+        const floorSel = document.getElementById('floor');
+        const floors = ["-2", "-1", "Крыша"];
+        for(let i=1; i<=24; i++) floors.push(i.toString());
+        floors.sort((a,b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+        floors.forEach(val => {
             let o = document.createElement('option');
-            o.value = i; o.textContent = i + ' этаж';
-            f.appendChild(o);
-        }
+            o.value = o.textContent = val;
+            floorSel.appendChild(o);
+        });
 
         function updateCategories() {
             const sys = document.getElementById('system').value;
@@ -92,7 +125,7 @@
             catSel.innerHTML = '<option value="">-- Выберите --</option>';
             for (let cat in allData[sys]) {
                 let o = document.createElement('option');
-                o.value = cat; o.textContent = cat;
+                o.value = o.textContent = cat;
                 catSel.appendChild(o);
             }
             updateWorks();
@@ -112,14 +145,14 @@
             }
         }
 
-        updateCategories();
+        updateCategories(); // Начальная загрузка
 
-        let rows = [];
+        let reportRows = [];
         function addRow() {
             const vol = document.getElementById('volume').value;
-            if(!vol) return alert("Введите объем!");
+            if(!vol || vol <= 0) return alert("Введите корректный объем!");
 
-            rows.push({
+            reportRows.push({
                 date: document.getElementById('date').value,
                 sys: document.getElementById('system').value,
                 block: document.getElementById('block').value,
@@ -128,21 +161,24 @@
                 work: document.getElementById('work').value,
                 vol: vol
             });
+
             render();
             document.getElementById('volume').value = '';
         }
 
         function render() {
-            const l = document.getElementById('list');
-            l.innerHTML = '';
-            rows.forEach((r, i) => {
-                l.innerHTML += `<div class="item">${i+1}. ${r.sys} | ${r.block} | эт.${r.floor} | ${r.work}: <b>${r.vol}</b></div>`;
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            reportRows.forEach((r, i) => {
+                const d = r.date.split('-').reverse().join('.');
+                list.innerHTML += `<div class="item">${i+1}. 📅 ${d} | 🏗 ${r.block} | 📍 ${r.floor} эт.<br>⚙️ <b>${r.sys}</b>: ${r.work} — <b>${r.vol}</b></div>`;
             });
             document.getElementById('summary').style.display = 'block';
         }
 
-        function send() {
-            tg.sendData(JSON.stringify(rows));
+        function sendData() {
+            if (reportRows.length === 0) return;
+            tg.sendData(JSON.stringify(reportRows));
             tg.close();
         }
     </script>

@@ -3,26 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчет ГИК: Стр, Эм, Мех</title>
+    <title>Отчет ГИК</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; padding: 15px; color: #333; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px; color: #555; text-transform: uppercase; }
-        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; appearance: none; background-color: #fff; }
-        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
-        button:active { background-color: #006699; }
-        .summary-card { border-top: 3px solid #28a745; display: none; }
-        .item { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; line-height: 1.4; }
-        .item b { color: #0088cc; }
-        h3 { margin-top: 0; font-size: 18px; color: #222; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        body { font-family: sans-serif; background-color: #f4f7f9; padding: 15px; color: #333; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #555; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background-color: #0088cc; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; }
+        .del-btn { width: auto; padding: 5px 10px; background-color: #ff4d4d; font-size: 12px; margin-left: 10px; }
+        h3 { margin-top: 0; color: #0088cc; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <h3>Новая запись</h3>
-        
         <label>📅 Дата:</label>
         <input type="date" id="date">
 
@@ -30,7 +25,7 @@
         <select id="system" onchange="updateCategories()">
             <option value="Стр">Стр (Общестрой)</option>
             <option value="Эм">Эм (Электрика)</option>
-            <option value="Мех">Мех (Сантехника/Отопление)</option>
+            <option value="Мех">Мех (Сантехника)</option>
         </select>
 
         <label>🏗 Блок:</label>
@@ -38,12 +33,7 @@
             <option value="Блок 17">Блок 17</option>
             <option value="Блок 18">Блок 18</option>
             <option value="Блок 22">Блок 22</option>
-            <option value="Блок 23">Блок 23</option>
-            <option value="Блок 24">Блок 24</option>
-            <option value="Блок 25">Блок 25</option>
             <option value="Блок 26">Блок 26</option>
-            <option value="Блок 27">Блок 27</option>
-            <option value="Блок 28">Блок 28</option>
             <option value="Блок 29">Блок 29</option>
         </select>
 
@@ -51,23 +41,21 @@
         <select id="floor"></select>
 
         <label>📁 Категория:</label>
-        <select id="category" onchange="updateWorks()">
-            <option value="">-- Выберите систему --</option>
-        </select>
+        <select id="category" onchange="updateWorks()"><option value="">-- Выберите --</option></select>
 
         <label>🛠 Работа:</label>
         <select id="work"></select>
 
         <label>🔢 Объем:</label>
-        <input type="number" id="volume" placeholder="0.00" step="0.01">
+        <input type="number" id="volume" placeholder="0.00" step="0.1">
         
         <button onclick="addRow()">➕ Добавить строку</button>
     </div>
 
-    <div class="card summary-card" id="summary">
-        <h3>Итоговый список:</h3>
+    <div class="card" id="summary" style="display: none;">
+        <h3>Ваш отчет:</h3>
         <div id="list"></div>
-        <button style="background-color: #28a745; margin-top: 15px;" onclick="sendData()">✅ Отправить в группу</button>
+        <button style="background-color: #28a745; margin-top: 15px;" onclick="send()">✅ Отправить в группу</button>
     </div>
 
     <script>
@@ -108,16 +96,12 @@
             }
         };
 
-        // Заполнение этажей
-        const floorSel = document.getElementById('floor');
-        const floors = ["-2", "-1", "Крыша"];
-        for(let i=1; i<=24; i++) floors.push(i.toString());
-        floors.sort((a,b) => (parseInt(a) || 0) - (parseInt(b) || 0));
-        floors.forEach(val => {
+        const f = document.getElementById('floor');
+        for(let i=1; i<=24; i++) {
             let o = document.createElement('option');
-            o.value = o.textContent = val;
-            floorSel.appendChild(o);
-        });
+            o.value = o.textContent = i;
+            f.appendChild(o);
+        }
 
         function updateCategories() {
             const sys = document.getElementById('system').value;
@@ -145,14 +129,14 @@
             }
         }
 
-        updateCategories(); // Начальная загрузка
+        updateCategories();
 
-        let reportRows = [];
+        let rows = [];
         function addRow() {
             const vol = document.getElementById('volume').value;
-            if(!vol || vol <= 0) return alert("Введите корректный объем!");
+            if(!vol) return alert("Введите объем!");
 
-            reportRows.push({
+            rows.push({
                 date: document.getElementById('date').value,
                 sys: document.getElementById('system').value,
                 block: document.getElementById('block').value,
@@ -161,24 +145,32 @@
                 work: document.getElementById('work').value,
                 vol: vol
             });
-
             render();
             document.getElementById('volume').value = '';
         }
 
-        function render() {
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            reportRows.forEach((r, i) => {
-                const d = r.date.split('-').reverse().join('.');
-                list.innerHTML += `<div class="item">${i+1}. 📅 ${d} | 🏗 ${r.block} | 📍 ${r.floor} эт.<br>⚙️ <b>${r.sys}</b>: ${r.work} — <b>${r.vol}</b></div>`;
-            });
-            document.getElementById('summary').style.display = 'block';
+        // НОВАЯ ФУНКЦИЯ УДАЛЕНИЯ
+        function deleteRow(index) {
+            rows.splice(index, 1);
+            render();
         }
 
-        function sendData() {
-            if (reportRows.length === 0) return;
-            tg.sendData(JSON.stringify(reportRows));
+        function render() {
+            const l = document.getElementById('list');
+            l.innerHTML = '';
+            rows.forEach((r, i) => {
+                l.innerHTML += `
+                    <div class="item">
+                        <span>${i+1}. ${r.sys} | эт.${r.floor} | ${r.work}: <b>${r.vol}</b></span>
+                        <button class="del-btn" onclick="deleteRow(${i})">❌</button>
+                    </div>`;
+            });
+            document.getElementById('summary').style.display = rows.length > 0 ? 'block' : 'none';
+        }
+
+        function send() {
+            if(rows.length === 0) return;
+            tg.sendData(JSON.stringify(rows));
             tg.close();
         }
     </script>

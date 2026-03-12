@@ -3,74 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Приемка материалов</title>
+    <title>Приемка по накладной</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Адаптируем цвета под тему Telegram пользователя */
         body {
             font-family: sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
             color: var(--tg-theme-text-color, #000000);
-            padding: 15px;
-            margin: 0;
+            padding: 15px; margin: 0;
         }
-        .item-block {
-            background-color: var(--tg-theme-secondary-bg-color, #f1f1f1);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
+        .header-block, .item-block {
+            background-color: var(--tg-theme-secondary-bg-color, #ffffff);
+            padding: 15px; border-radius: 10px; margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             position: relative;
         }
-        .item-block h3 { margin-top: 0; font-size: 16px; }
-        label { display: block; margin-top: 10px; font-size: 14px; font-weight: bold; }
+        h2 { margin-top: 0; font-size: 18px; color: var(--tg-theme-text-color, #333); border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        h3 { margin-top: 0; font-size: 15px; color: var(--tg-theme-hint-color, #666); }
+        label { display: block; margin-top: 10px; font-size: 13px; font-weight: bold; color: var(--tg-theme-text-color, #555);}
         input, select {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid var(--tg-theme-hint-color, #ccc);
-            border-radius: 5px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-            font-size: 14px;
+            width: 100%; box-sizing: border-box; padding: 10px; margin-top: 5px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc); border-radius: 5px;
+            background-color: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); font-size: 14px;
         }
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
         .add-btn {
             width: 100%; padding: 12px; margin-bottom: 30px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none; border-radius: 8px; font-size: 16px; cursor: pointer;
+            background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff);
+            border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;
         }
         .remove-btn {
-            position: absolute; top: 10px; right: 10px;
-            background: red; color: white; border: none;
+            position: absolute; top: 15px; right: 15px;
+            background: #ff3b30; color: white; border: none;
             border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px;
         }
     </style>
 </head>
 <body>
 
-    <div id="items-container">
+    <div class="header-block">
+        <h2>📄 Данные накладной</h2>
+        
+        <div class="row">
+            <div>
+                <label>Дата</label>
+                <input type="date" id="inv-date" required>
+            </div>
+            <div>
+                <label>№ Накладной</label>
+                <input type="text" id="inv-num" placeholder="Например: 125-А" required>
+            </div>
         </div>
 
-    <button class="add-btn" onclick="addItem()">+ Добавить еще позицию</button>
+        <label>Поставщик / Водитель</label>
+        <input type="text" id="inv-supplier" placeholder="ОсОО СтройМир / Газель 123" required>
+    </div>
+
+    <h2 style="margin-top: 20px;">📦 Список материалов</h2>
+    <div id="items-container"></div>
+
+    <button class="add-btn" onclick="addItem()">+ Добавить позицию</button>
 
     <script>
-        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Открываем на весь экран
+        tg.expand();
+
+        // Ставим сегодняшнюю дату по умолчанию
+        document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
 
         const container = document.getElementById('items-container');
         let itemCount = 0;
 
-        // Функция для получения сегодняшней даты в формате YYYY-MM-DD (для input type="date")
-        function getTodayDate() {
-            const today = new Date();
-            return today.toISOString().split('T')[0];
-        }
-
-        // Функция добавления нового блока формы
         function addItem() {
             itemCount++;
             const blockId = `item-${itemCount}`;
@@ -81,27 +85,18 @@
             div.innerHTML = `
                 ${itemCount > 1 ? `<button class="remove-btn" onclick="removeItem('${blockId}')">Удалить</button>` : ''}
                 <h3>Позиция #${itemCount}</h3>
-                
-                <label>Дата прихода</label>
-                <input type="date" class="i-date" value="${getTodayDate()}" required>
-
-                <label>Категория</label>
-                <select class="i-category">
-                    <option value="Сыпучие материалы">Сыпучие материалы</option>
-                    <option value="Металлопрокат">Металлопрокат</option>
-                    <option value="Пиломатериалы">Пиломатериалы</option>
-                    <option value="ГСМ">ГСМ</option>
-                    <option value="Инструмент и расходники">Инструмент и расходники</option>
-                    <option value="Прочее">Прочее</option>
-                </select>
 
                 <label>Наименование материала</label>
                 <input type="text" class="i-name" placeholder="Например: Цемент М500" required>
 
                 <div class="row">
                     <div>
+                        <label>Цена (за ед.)</label>
+                        <input type="number" class="i-price" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div>
                         <label>Кол-во</label>
-                        <input type="number" class="i-qty" step="0.01" placeholder="100" required>
+                        <input type="number" class="i-qty" step="0.01" placeholder="0" required>
                     </div>
                     <div>
                         <label>Ед. изм.</label>
@@ -111,70 +106,69 @@
                             <option value="тн">тн</option>
                             <option value="м3">м³</option>
                             <option value="м.п.">м.п.</option>
-                            <option value="меш">мешков</option>
-                            <option value="литр">литров</option>
+                            <option value="меш">меш</option>
+                            <option value="л">литр</option>
                         </select>
                     </div>
                 </div>
-
-                <label>Поставщик / Водитель</label>
-                <input type="text" class="i-supplier" placeholder="ОсОО СтройМир / Газель 123">
             `;
             container.appendChild(div);
         }
 
-        // Функция удаления блока
         function removeItem(id) {
-            const block = document.getElementById(id);
-            if(block) block.remove();
+            document.getElementById(id)?.remove();
         }
 
-        // Добавляем первую позицию при загрузке
-        addItem();
+        addItem(); // Добавляем первую позицию при запуске
 
-        // Настройка главной кнопки Telegram
-        tg.MainButton.text = "ОТПРАВИТЬ ДАННЫЕ В БОТ";
+        tg.MainButton.text = "ОТПРАВИТЬ НАКЛАДНУЮ";
         tg.MainButton.show();
 
-        // Обработка нажатия на главную кнопку
         tg.MainButton.onClick(() => {
-            const blocks = document.querySelectorAll('.item-block');
+            // Собираем общие данные
+            const invDateRaw = document.getElementById('inv-date').value;
+            const invNum = document.getElementById('inv-num').value.trim();
+            const invSupplier = document.getElementById('inv-supplier').value.trim();
+
+            if (!invNum || !invSupplier) {
+                tg.showAlert("Заполните номер накладной и поставщика!");
+                return;
+            }
+
+            const formattedDate = invDateRaw.split('-').reverse().join('.');
             let items = [];
             let isValid = true;
 
-            blocks.forEach(block => {
-                const date = block.querySelector('.i-date').value;
-                const category = block.querySelector('.i-category').value;
-                const name = block.querySelector('.i-name').value;
+            // Собираем материалы
+            document.querySelectorAll('.item-block').forEach(block => {
+                const name = block.querySelector('.i-name').value.trim();
+                const price = block.querySelector('.i-price').value;
                 const qty = block.querySelector('.i-qty').value;
                 const unit = block.querySelector('.i-unit').value;
-                const supplier = block.querySelector('.i-supplier').value;
 
-                // Простейшая проверка заполненности
-                if(!name || !qty) {
-                    isValid = false;
-                }
-
-                // Переводим дату из YYYY-MM-DD в более привычный DD.MM.YYYY
-                const formattedDate = date.split('-').reverse().join('.');
+                if(!name || !price || !qty) isValid = false;
 
                 items.push({
-                    date: formattedDate,
-                    category: category,
-                    material_name: name,
-                    quantity: parseFloat(qty),
-                    unit: unit,
-                    supplier: supplier || "Не указан"
+                    name: name,
+                    price: parseFloat(price) || 0,
+                    qty: parseFloat(qty) || 0,
+                    unit: unit
                 });
             });
 
             if (!isValid) {
-                tg.showAlert("Пожалуйста, заполните Наименование и Количество во всех позициях!");
+                tg.showAlert("Пожалуйста, заполните Наименование, Цену и Количество для всех позиций!");
                 return;
             }
 
-            // Формируем JSON и отправляем в бота
-            const dataToSend = JSON.stringify({ items: items });
+            // Формируем итоговый JSON
+            const dataToSend = JSON.stringify({
+                invoice_date: formattedDate,
+                invoice_number: invNum,
+                supplier: invSupplier,
+                items: items
+            });
+            
             tg.sendData(dataToSend);
         });
     </script>

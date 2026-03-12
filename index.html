@@ -26,10 +26,16 @@
             width: 100%; box-sizing: border-box; padding: 12px 10px; margin-top: 5px;
             border: 1px solid var(--tg-theme-hint-color, #ccc); border-radius: 5px;
             background-color: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); font-size: 15px;
+            /* Убираем стандартные тени iOS */
             -webkit-appearance: none; appearance: none;
         }
         
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        /* Жесткая нерушимая сетка 50/50 для цены и количества */
+        .grid-2 { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+        }
         
         .add-btn {
             width: 100%; padding: 14px; margin-bottom: 30px;
@@ -45,9 +51,6 @@
 </head>
 <body>
 
-    <datalist id="supplier-list"></datalist>
-    <datalist id="material-list"></datalist>
-
     <div class="header-block">
         <h2>📄 Данные накладной</h2>
         
@@ -58,7 +61,7 @@
         <input type="text" id="inv-num" inputmode="text" placeholder="Например: 125-А" required>
 
         <label>Поставщик / Водитель</label>
-        <input type="text" id="inv-supplier" list="supplier-list" placeholder="Начните вводить..." required autocomplete="off">
+        <input type="text" id="inv-supplier" placeholder="ОсОО СтройМир / Газель 123" required>
     </div>
 
     <h2 style="margin-top: 20px;">📦 Список материалов</h2>
@@ -71,36 +74,6 @@
         tg.expand();
 
         document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
-
-        // ==========================================
-        // ЛОГИКА ПАМЯТИ (LOCAL STORAGE)
-        // ==========================================
-        
-        // Загружаем сохраненные данные из памяти телефона (или создаем базовые, если их нет)
-        let savedSuppliers = JSON.parse(localStorage.getItem('mySuppliers')) || ["ОсОО СтройМир", "МеталлПром", "Газель 123"];
-        let savedMaterials = JSON.parse(localStorage.getItem('myMaterials')) || ["Цемент М500", "Арматура 12мм", "Песок мытый", "Щебень фракция 5-20"];
-
-        // Функция обновления скрытых списков <datalist>
-        function updateDatalists() {
-            const supList = document.getElementById('supplier-list');
-            supList.innerHTML = '';
-            savedSuppliers.forEach(item => {
-                supList.innerHTML += `<option value="${item}">`;
-            });
-
-            const matList = document.getElementById('material-list');
-            matList.innerHTML = '';
-            savedMaterials.forEach(item => {
-                matList.innerHTML += `<option value="${item}">`;
-            });
-        }
-
-        // Заполняем списки при открытии формы
-        updateDatalists();
-
-        // ==========================================
-        // ЛОГИКА ДОБАВЛЕНИЯ ПОЗИЦИЙ
-        // ==========================================
 
         const container = document.getElementById('items-container');
         let itemCount = 0;
@@ -117,7 +90,7 @@
                 <h3>Позиция #${itemCount}</h3>
 
                 <label>Наименование материала</label>
-                <input type="text" class="i-name" list="material-list" placeholder="Начните вводить..." required autocomplete="off">
+                <input type="text" class="i-name" placeholder="Например: Цемент М500" required>
 
                 <div class="grid-2">
                     <div>
@@ -148,11 +121,7 @@
             document.getElementById(id)?.remove();
         }
 
-        addItem(); // Вызываем первую карточку
-
-        // ==========================================
-        // ОТПРАВКА ДАННЫХ И СОХРАНЕНИЕ В ПАМЯТЬ
-        // ==========================================
+        addItem();
 
         tg.MainButton.text = "ОТПРАВИТЬ НАКЛАДНУЮ";
         tg.MainButton.show();
@@ -167,12 +136,6 @@
                 return;
             }
 
-            // 1. Сохраняем нового поставщика в память, если его там еще нет
-            if (!savedSuppliers.includes(invSupplier)) {
-                savedSuppliers.push(invSupplier);
-                localStorage.setItem('mySuppliers', JSON.stringify(savedSuppliers));
-            }
-
             const formattedDate = invDateRaw.split('-').reverse().join('.');
             let items = [];
             let isValid = true;
@@ -184,12 +147,6 @@
                 const unit = block.querySelector('.i-unit').value;
 
                 if(!name || !price || !qty) isValid = false;
-
-                // 2. Сохраняем новый материал в память, если его там еще нет
-                if (name && !savedMaterials.includes(name)) {
-                    savedMaterials.push(name);
-                    localStorage.setItem('myMaterials', JSON.stringify(savedMaterials));
-                }
 
                 items.push({
                     name: name,
